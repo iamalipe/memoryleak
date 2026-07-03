@@ -179,7 +179,7 @@ export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewPr
   return (
     <div 
       onDoubleClick={onEdit} 
-      className="obsidian-preview h-full overflow-y-auto px-10 py-8 select-text cursor-default max-w-3xl mx-auto prose prose-neutral dark:prose-invert"
+      className="obsidian-preview h-full overflow-y-auto px-4 py-6 sm:px-10 sm:py-8 select-text cursor-default max-w-3xl mx-auto prose prose-neutral dark:prose-invert"
       title="Double click to edit note"
     >
       <ReactMarkdown

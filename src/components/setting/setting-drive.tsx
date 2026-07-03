@@ -204,7 +204,7 @@ export const SettingDrive = () => {
           </p>
         </div>
 
-        <div className="flex items-center justify-between rounded-lg border p-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border p-3">
           <div className="flex items-center gap-2">
             {current.icon}
             <div>
@@ -218,7 +218,7 @@ export const SettingDrive = () => {
           </div>
 
           {!isConnected ? (
-            <Button variant="outline" size="sm" onClick={connect}>
+            <Button variant="outline" size="sm" onClick={connect} className="w-full sm:w-auto">
               <Cloud className="mr-1.5 h-3.5 w-3.5" />
               Connect
             </Button>
@@ -227,7 +227,7 @@ export const SettingDrive = () => {
               variant="ghost"
               size="sm"
               onClick={disconnect}
-              className="text-muted-foreground hover:text-destructive"
+              className="w-full sm:w-auto text-muted-foreground hover:text-destructive justify-center"
             >
               <LogOut className="mr-1.5 h-3.5 w-3.5" />
               Disconnect
@@ -299,7 +299,7 @@ export const SettingDrive = () => {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Input
             value={folderName}
             onChange={(e) => setFolderName(e.target.value)}
@@ -311,6 +311,7 @@ export const SettingDrive = () => {
             variant="outline"
             disabled={isSyncing || isChangingFolder || !folderName.trim() || folderName.trim() === currentFolderName}
             onClick={handleFolderChange}
+            className="w-full sm:w-auto"
           >
             {isChangingFolder ? (
               <>

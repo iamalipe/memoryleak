@@ -54,22 +54,22 @@ export const SettingAiModels = () => {
         {/* Device Info */}
         {deviceInfo && (
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border p-2 text-center">
-              <p className="text-[10px] text-muted-foreground">CPU</p>
-              <p className="text-xs font-mono font-medium">
+            <div className="rounded-lg border p-2 text-center min-w-0">
+              <p className="text-[10px] text-muted-foreground truncate">CPU</p>
+              <p className="text-xs font-mono font-medium truncate">
                 {deviceInfo.cpuCores} cores
               </p>
             </div>
-            <div className="rounded-lg border p-2 text-center">
-              <p className="text-[10px] text-muted-foreground">RAM</p>
-              <p className="text-xs font-mono font-medium">
+            <div className="rounded-lg border p-2 text-center min-w-0">
+              <p className="text-[10px] text-muted-foreground truncate">RAM</p>
+              <p className="text-xs font-mono font-medium truncate">
                 {deviceInfo.ramGB === "Unknown"
                   ? "N/A"
                   : `${deviceInfo.ramGB} GB`}
               </p>
             </div>
-            <div className="rounded-lg border p-2 text-center">
-              <p className="text-[10px] text-muted-foreground">GPU</p>
+            <div className="rounded-lg border p-2 text-center min-w-0">
+              <p className="text-[10px] text-muted-foreground truncate">GPU</p>
               <p className="truncate text-xs font-mono font-medium" title={deviceInfo.gpu}>
                 {deviceInfo.gpu}
               </p>

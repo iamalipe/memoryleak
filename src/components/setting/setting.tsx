@@ -38,7 +38,7 @@ const SettingDialog = ({ defaultTab = "general" }: SettingDialogProps) => {
           <SettingsIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
@@ -48,16 +48,16 @@ const SettingDialog = ({ defaultTab = "general" }: SettingDialogProps) => {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="w-full">
-            <TabsTrigger value="general" className="flex items-center gap-1.5">
+          <TabsList className="w-full overflow-x-auto justify-start sm:justify-center flex-nowrap scrollbar-none h-auto py-1 px-1 gap-1 shrink-0">
+            <TabsTrigger value="general" className="flex items-center gap-1.5 shrink-0">
               <Palette className="h-3.5 w-3.5" />
               General
             </TabsTrigger>
-            <TabsTrigger value="drive" className="flex items-center gap-1.5">
+            <TabsTrigger value="drive" className="flex items-center gap-1.5 shrink-0">
               <Cloud className="h-3.5 w-3.5" />
               Google Drive
             </TabsTrigger>
-            <TabsTrigger value="ai" className="flex items-center gap-1.5">
+            <TabsTrigger value="ai" className="flex items-center gap-1.5 shrink-0">
               <Cpu className="h-3.5 w-3.5" />
               AI Models
             </TabsTrigger>
