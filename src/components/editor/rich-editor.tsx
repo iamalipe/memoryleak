@@ -29,7 +29,11 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { useDictionaryStore } from "@/hooks/use-dictionary-store"
-import { spellcheckPlugin, spellcheckContextMenuHandler } from "./extensions/spellcheck-extension"
+import {
+  spellcheckPlugin,
+  spellcheckContextMenuHandler,
+  spellcheckHoverTooltip,
+} from "./extensions/spellcheck-extension"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -577,6 +581,7 @@ export const RichEditor = ({
       EditorView.lineWrapping,
       spellcheckPlugin,
       spellcheckContextMenuHandler,
+      spellcheckHoverTooltip,
     ]
     if (mode === "obsidian") {
       list.push(markdownLivePreviewField)

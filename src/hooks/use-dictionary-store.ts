@@ -1,7 +1,7 @@
-import { get, set } from "idb-keyval"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { idbStateStorage } from "./db"
+import SpellcheckWorker from "@/lib/spellcheck.worker?worker"
 
 interface DictionaryStoreType {
   customWords: string[]
@@ -12,19 +12,37 @@ interface DictionaryStoreType {
   loadStandardDictionary: () => Promise<void>
 }
 
-let standardWordsSet = new Set<string>()
+let worker: Worker | null = null
+const suggestionCallbacks: Record<string, (suggestions: string[]) => void> = {}
+export const spellingCache: Record<string, boolean> = {}
 
-// Load any previously cached dictionary on startup
-get("standard-dictionary")
-  .then((cached) => {
-    if (cached && typeof cached === "string") {
-      const list = cached.split("\n")
-      standardWordsSet = new Set(list.map((w) => w.trim().toLowerCase()))
+function getWorker() {
+  if (typeof window === "undefined") return null
+  if (!worker) {
+    worker = new SpellcheckWorker()
+    worker.onmessage = (e) => {
+      const { type, payload } = e.data
+
+      if (type === "ready") {
+        console.log("Spellcheck Store: Worker ready!")
+        useDictionaryStore.setState({ isLoaded: true, isLoading: false })
+      } else if (type === "check-words-results") {
+        Object.assign(spellingCache, payload)
+        window.dispatchEvent(new CustomEvent("spelling-cache-updated"))
+      } else if (type === "suggestions-results") {
+        const { word, suggestions } = payload
+        if (suggestionCallbacks[word]) {
+          suggestionCallbacks[word](suggestions)
+          delete suggestionCallbacks[word]
+        }
+      }
     }
-  })
-  .catch((err) =>
-    console.error("Failed to load cached standard dictionary:", err)
-  )
+
+    const customWords = useDictionaryStore.getState().customWords
+    worker.postMessage({ type: "init", payload: { customWords } })
+  }
+  return worker
+}
 
 export const useDictionaryStore = create<DictionaryStoreType>()(
   persist(
@@ -38,48 +56,38 @@ export const useDictionaryStore = create<DictionaryStoreType>()(
         if (!cleaned) return
         const current = zGet().customWords
         if (!current.includes(cleaned)) {
-          zSet({ customWords: [...current, cleaned] })
+          const next = [...current, cleaned]
+          zSet({ customWords: next })
+
+          const w = getWorker()
+          if (w) {
+            w.postMessage({ type: "add-custom-word", payload: cleaned })
+          }
+
+          delete spellingCache[cleaned]
+          window.dispatchEvent(new CustomEvent("spelling-cache-updated"))
         }
       },
 
       removeWord: (word) => {
         const cleaned = word.trim().toLowerCase()
         const current = zGet().customWords
-        zSet({ customWords: current.filter((w) => w !== cleaned) })
+        const next = current.filter((w) => w !== cleaned)
+        zSet({ customWords: next })
+
+        const w = getWorker()
+        if (w) {
+          w.postMessage({ type: "set-custom-words", payload: next })
+        }
+
+        delete spellingCache[cleaned]
+        window.dispatchEvent(new CustomEvent("spelling-cache-updated"))
       },
 
       loadStandardDictionary: async () => {
-        if (standardWordsSet.size > 0) {
-          zSet({ isLoaded: true })
-          return
-        }
-
+        // Initialize worker to trigger dictionary download & instantiation
         zSet({ isLoading: true })
-        try {
-          let dictionaryText = (await get("standard-dictionary")) as
-            | string
-            | undefined
-
-          if (!dictionaryText) {
-            console.log("Downloading standard dictionary list...")
-            const response = await fetch(
-              "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears-medium.txt"
-            )
-            dictionaryText = await response.text()
-            await set("standard-dictionary", dictionaryText)
-          }
-
-          const words = dictionaryText
-            .split("\n")
-            .map((w) => w.trim().toLowerCase())
-            .filter(Boolean)
-          standardWordsSet = new Set(words)
-          zSet({ isLoaded: true })
-        } catch (err) {
-          console.error("Failed to load standard dictionary:", err)
-        } finally {
-          zSet({ isLoading: false })
-        }
+        getWorker()
       },
     }),
     {
@@ -93,9 +101,7 @@ export function isWordSpelledCorrectly(word: string): boolean {
   const cleaned = word.trim().toLowerCase()
   if (!cleaned) return true
 
-  console.log("cleaned", cleaned)
-
-  // Ignore numbers, single characters, punctuation, and URLs/emails/formatting marks
+  // Ignore numbers, single characters, formatting characters, and tech elements
   if (
     /^\d+$/.test(cleaned) ||
     cleaned.length <= 1 ||
@@ -107,20 +113,42 @@ export function isWordSpelledCorrectly(word: string): boolean {
   ) {
     return true
   }
-  console.log("cleaned 2", cleaned)
 
   // Check custom dictionary
   const customWords = useDictionaryStore.getState().customWords
   if (customWords.includes(cleaned)) {
     return true
   }
-  console.log("cleaned 3", cleaned)
-  console.log("standardWordsSet", standardWordsSet)
 
-  // Check standard dictionary if loaded
-  if (standardWordsSet.size > 0) {
-    return standardWordsSet.has(cleaned)
+  // Check the background worker spelling cache
+  if (spellingCache[cleaned] !== undefined) {
+    return spellingCache[cleaned]
+  }
+
+  // Trigger spelling check in background
+  const w = getWorker()
+  if (w) {
+    w.postMessage({ type: "check-words", payload: [cleaned] })
   }
 
   return true
+}
+
+export function getSpellingSuggestions(word: string): Promise<string[]> {
+  return new Promise((resolve) => {
+    const cleaned = word.trim().toLowerCase()
+    if (!cleaned) {
+      resolve([])
+      return
+    }
+
+    const w = getWorker()
+    if (!w) {
+      resolve([])
+      return
+    }
+
+    suggestionCallbacks[cleaned] = resolve
+    w.postMessage({ type: "get-suggestions", payload: cleaned })
+  })
 }
