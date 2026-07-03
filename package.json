@@ -28,6 +28,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^5.4.0",
+    "@huggingface/transformers": "^4.2.0",
     "@lezer/highlight": "^1.2.3",
     "@mlc-ai/web-llm": "^0.2.84",
     "@tailwindcss/vite": "^4",

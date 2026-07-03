@@ -235,6 +235,16 @@ export async function syncAll(): Promise<void> {
     const config = buildConfig();
     await uploadJSON("config.json", config, rootId, configJsonId ?? undefined);
 
+    // Re-index missing or updated notes in the background
+    try {
+      const { useNoteStore } = await import("@/hooks/use-note-store");
+      const { indexMissingNotes } = await import("@/lib/vector-store");
+      const notes = useNoteStore.getState().notes;
+      indexMissingNotes(notes).catch(err => console.error("[sync] Background indexing failed:", err));
+    } catch (err) {
+      console.error("[sync] Failed to trigger vector indexing:", err);
+    }
+
     lastSyncedAt = Date.now();
     emit("connected");
   } catch (err) {

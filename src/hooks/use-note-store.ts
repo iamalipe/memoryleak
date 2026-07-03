@@ -45,6 +45,7 @@ interface NoteStoreType {
   // --- Memory & Content Actions ---
   openNote: (id: string) => Promise<void>
   openNoteToRight: (id: string) => Promise<void>
+  openNoteInCurrentTab: (id: string) => Promise<void>
   closeNote: (id: string, panel: "left" | "right") => void
   closeOthers: (id: string, panel: "left" | "right") => void
   closeLeft: (id: string, panel: "left" | "right") => void
@@ -133,6 +134,10 @@ export const useNoteStore = create<NoteStoreType>()(
         // If the update includes heavy content, save it immediately to IndexedDB
         if (updates.content !== undefined) {
           await db.saveContent(id, updates.content)
+          // Run embedding generation in the background asynchronously
+          import("@/lib/vector-store").then(({ indexNote }) => {
+            indexNote(id, updates.content!)
+          }).catch(err => console.error("Failed to run background embedding:", err))
         }
 
         set((state) => ({
@@ -296,6 +301,56 @@ export const useNoteStore = create<NoteStoreType>()(
           isSplit: true,
           activePanel: "right",
         })
+      },
+
+      openNoteInCurrentTab: async (id) => {
+        const state = get()
+        const panel = state.activePanel
+
+        // 1. Fetch heavy content from IndexedDB
+        const fullContent = await db.getContent(id)
+
+        // 2. Inject into memory
+        const updatedNotes = state.notes.map((note) =>
+          note.id === id ? { ...note, content: fullContent } : note
+        )
+
+        if (panel === "left") {
+          const currentActiveId = state.activeNoteId
+          let nextActiveNoteIds = [...state.activeNoteIds]
+
+          if (currentActiveId && nextActiveNoteIds.includes(currentActiveId)) {
+            const index = nextActiveNoteIds.indexOf(currentActiveId)
+            nextActiveNoteIds[index] = id
+            nextActiveNoteIds = Array.from(new Set(nextActiveNoteIds))
+          } else {
+            nextActiveNoteIds = [...nextActiveNoteIds, id]
+          }
+
+          set({
+            notes: updatedNotes,
+            activeNoteIds: nextActiveNoteIds,
+            activeNoteId: id,
+          })
+        } else {
+          const currentRightActiveId = state.rightActiveNoteId
+          let nextRightActiveNoteIds = [...state.rightActiveNoteIds]
+
+          if (currentRightActiveId && nextRightActiveNoteIds.includes(currentRightActiveId)) {
+            const index = nextRightActiveNoteIds.indexOf(currentRightActiveId)
+            nextRightActiveNoteIds[index] = id
+            nextRightActiveNoteIds = Array.from(new Set(nextRightActiveNoteIds))
+          } else {
+            nextRightActiveNoteIds = [...nextRightActiveNoteIds, id]
+          }
+
+          set({
+            notes: updatedNotes,
+            rightActiveNoteIds: nextRightActiveNoteIds,
+            rightActiveNoteId: id,
+            isSplit: true,
+          })
+        }
       },
 
       closeNote: (id, panel) => {
@@ -613,13 +668,52 @@ export const useNoteStore = create<NoteStoreType>()(
       name: "notes-app-storage",
       storage: createJSONStorage(() => idbStateStorage),
 
-      // CRITICAL: Prevent heavy content and active sessions from being saved
-      // in the main state payload to keep initial load times instant.
+      // CRITICAL: Prevent heavy content from being saved in the main state payload
+      // to keep initial load times instant. Active session states (open tab IDs and active panels)
+      // are persisted here to maintain user state across refreshes/reopens.
       partialize: (state) => ({
         notes: state.notes.map((note) => ({ ...note, content: "" })),
         folders: state.folders,
-        // activeNoteIds & session fields are intentionally omitted here
+        activeNoteIds: state.activeNoteIds,
+        activeNoteId: state.activeNoteId,
+        rightActiveNoteIds: state.rightActiveNoteIds,
+        rightActiveNoteId: state.rightActiveNoteId,
+        isSplit: state.isSplit,
+        activePanel: state.activePanel,
       }),
+
+      onRehydrateStorage: () => {
+        return async (rehydratedState, error) => {
+          if (error || !rehydratedState) return
+
+          try {
+            const notesToReload = Array.from(
+              new Set(
+                [
+                  ...(rehydratedState.activeNoteIds || []),
+                  ...(rehydratedState.rightActiveNoteIds || []),
+                  rehydratedState.activeNoteId,
+                  rehydratedState.rightActiveNoteId,
+                ].filter(Boolean) as string[]
+              )
+            )
+
+            if (notesToReload.length > 0) {
+              const updatedNotes = [...rehydratedState.notes]
+              for (const id of notesToReload) {
+                const fullContent = await db.getContent(id)
+                const index = updatedNotes.findIndex((n) => n.id === id)
+                if (index !== -1) {
+                  updatedNotes[index] = { ...updatedNotes[index], content: fullContent }
+                }
+              }
+              useNoteStore.setState({ notes: updatedNotes })
+            }
+          } catch (err) {
+            console.error("Failed to load active note contents on rehydration:", err)
+          }
+        }
+      },
     }
   )
 )

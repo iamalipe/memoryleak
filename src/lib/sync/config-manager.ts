@@ -4,6 +4,7 @@
 import { getAllNodes, type FileNode } from "@/lib/idb-fs";
 import { useNoteStore, type NoteType, type FolderType } from "@/hooks/use-note-store";
 import { db } from "@/hooks/db";
+import { useDictionaryStore } from "@/hooks/use-dictionary-store";
 
 // --- Types ---
 
@@ -11,6 +12,7 @@ export interface SyncConfig {
   version: 1;
   theme: string;
   updatedAt: number;
+  customDictionary?: string[];
 }
 
 export interface ManifestEntry {
@@ -30,10 +32,12 @@ export interface SyncManifest {
 export function buildConfig(): SyncConfig {
   // Read theme from localStorage (next-themes stores it there)
   const theme = localStorage.getItem("theme") ?? "system";
+  const customDictionary = useDictionaryStore.getState().customWords;
 
   return {
     version: 1,
     theme,
+    customDictionary,
     updatedAt: Date.now(),
   };
 }
@@ -41,6 +45,11 @@ export function buildConfig(): SyncConfig {
 export function applyConfig(config: SyncConfig): void {
   if (config.theme) {
     localStorage.setItem("theme", config.theme);
+  }
+  if (config.customDictionary && Array.isArray(config.customDictionary)) {
+    const current = useDictionaryStore.getState().customWords;
+    const merged = Array.from(new Set([...current, ...config.customDictionary]));
+    useDictionaryStore.setState({ customWords: merged });
   }
 }
 

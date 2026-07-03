@@ -57,7 +57,9 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        {children}
+        <Command className="[&_[data-slot=command-list]]:max-h-[340px]">
+          {children}
+        </Command>
       </DialogContent>
     </Dialog>
   )

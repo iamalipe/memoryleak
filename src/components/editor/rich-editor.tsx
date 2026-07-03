@@ -28,6 +28,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
+import { useDictionaryStore } from "@/hooks/use-dictionary-store"
+import { spellcheckPlugin, spellcheckContextMenuHandler } from "./extensions/spellcheck-extension"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -255,6 +257,11 @@ export const RichEditor = ({
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
+  // Lazy-load standard dictionary on editor mount
+  useEffect(() => {
+    useDictionaryStore.getState().loadStandardDictionary()
+  }, [])
+
   // Resolve light/dark theme dynamically
   const resolvedTheme = useMemo(() => {
     if (theme === "system") {
@@ -278,6 +285,9 @@ export const RichEditor = ({
           ? "var(--font-sans), sans-serif" 
           : "var(--font-mono, Menlo, Monaco, Consolas, 'Courier New', monospace)",
         backgroundColor: "transparent",
+      },
+      ".cm-misspelled": {
+        textDecoration: "underline oklch(0.577 0.245 27.325) wavy",
       },
       ".cm-scroller": {
         overflow: "auto",
@@ -565,6 +575,8 @@ export const RichEditor = ({
       editorBaseTheme,
       keyboardShortcutsExtension,
       EditorView.lineWrapping,
+      spellcheckPlugin,
+      spellcheckContextMenuHandler,
     ]
     if (mode === "obsidian") {
       list.push(markdownLivePreviewField)
