@@ -1,0 +1,7 @@
+services:
+  testing-site:
+    container_name: simple-testing-site
+    build: .   # This single dot tells Portainer to use the Dockerfile in this repo
+    restart: always
+    ports:
+      - "3000:80"  # Adjust the '80' if your React app uses a different internal port
