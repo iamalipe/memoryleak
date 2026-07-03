@@ -1,15 +1,15 @@
+import { useFileStore } from "@/hooks/use-file-store"
+import { cn } from "@/lib/utils"
+import { useNavigate } from "@tanstack/react-router"
+import "katex/dist/katex.min.css"
 import { useCallback, useMemo } from "react"
 import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import rehypeHighlight from "rehype-highlight"
-import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import remarkEmoji from "remark-emoji"
-import { useNavigate } from "@tanstack/react-router"
-import { useFileStore } from "@/hooks/use-file-store"
-import { cn } from "@/lib/utils"
-import "katex/dist/katex.min.css"
+import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
 
 // Matches [[filename]] or [[path/filename]]
 const WIKILINK_RE = /\[\[([^\]]+)\]\]/g
@@ -27,29 +27,36 @@ interface ObsidianPreviewProps {
   onEdit: () => void
 }
 
-export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewProps) => {
+export const ObsidianPreview = ({
+  content,
+  onChange,
+  onEdit,
+}: ObsidianPreviewProps) => {
   const navigate = useNavigate()
   const nodes = useFileStore((s) => s.nodes)
 
   // Interactive Checklist toggle helper
-  const handleToggleCheckbox = useCallback((indexToToggle: number) => {
-    let count = 0
-    const lines = content.split(/\r?\n/)
-    const newLines = lines.map((line) => {
-      // Matches checklist syntax: optional whitespace, bullet indicator, then [ ] or [x]
-      const match = line.match(/^(\s*[-*+]\s+\[)([ xX])(\].*)$/)
-      if (match) {
-        if (count === indexToToggle) {
-          const currentStatus = match[2]
-          const newStatus = currentStatus === " " ? "x" : " "
-          line = `${match[1]}${newStatus}${match[3]}`
+  const handleToggleCheckbox = useCallback(
+    (indexToToggle: number) => {
+      let count = 0
+      const lines = content.split(/\r?\n/)
+      const newLines = lines.map((line) => {
+        // Matches checklist syntax: optional whitespace, bullet indicator, then [ ] or [x]
+        const match = line.match(/^(\s*[-*+]\s+\[)([ xX])(\].*)$/)
+        if (match) {
+          if (count === indexToToggle) {
+            const currentStatus = match[2]
+            const newStatus = currentStatus === " " ? "x" : " "
+            line = `${match[1]}${newStatus}${match[3]}`
+          }
+          count++
         }
-        count++
-      }
-      return line
-    })
-    onChange(newLines.join("\n"))
-  }, [content, onChange])
+        return line
+      })
+      onChange(newLines.join("\n"))
+    },
+    [content, onChange]
+  )
 
   // Define custom component overrides to style and handle actions natively
   const components = useMemo(() => {
@@ -62,23 +69,31 @@ export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewPr
           checklistIndex++
 
           return (
-            <li className="list-none flex items-start gap-2.5 my-1 align-middle">
+            <li className="my-1 flex list-none items-start gap-2.5 align-middle">
               <input
                 type="checkbox"
                 checked={checked}
                 onChange={() => handleToggleCheckbox(currentIndex)}
-                className="mt-1 h-4.5 w-4.5 shrink-0 rounded-md border-border bg-background text-primary accent-primary cursor-pointer select-none"
+                className="mt-1 h-4.5 w-4.5 shrink-0 cursor-pointer rounded-md border-border bg-background text-primary accent-primary select-none"
               />
-              <span className={cn(
-                "select-text transition-all",
-                checked ? "line-through text-muted-foreground opacity-75" : "text-foreground"
-              )}>
+              <span
+                className={cn(
+                  "transition-all select-text",
+                  checked
+                    ? "text-muted-foreground line-through opacity-75"
+                    : "text-foreground"
+                )}
+              >
                 {children}
               </span>
             </li>
           )
         }
-        return <li {...props} className="my-1.5 text-foreground select-text">{children}</li>
+        return (
+          <li {...props} className="my-1.5 text-foreground select-text">
+            {children}
+          </li>
+        )
       },
       a({ href, children }: any) {
         if (href?.startsWith("wikilink:")) {
@@ -99,8 +114,10 @@ export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewPr
                 if (resolved) navigate({ to: `/app/${resolved}` })
               }}
               className={cn(
-                "cursor-pointer underline decoration-dotted font-semibold transition-colors",
-                resolved ? "text-primary hover:text-primary/80" : "text-muted-foreground/70 hover:text-muted-foreground"
+                "cursor-pointer font-semibold underline decoration-dotted transition-colors",
+                resolved
+                  ? "text-primary hover:text-primary/80"
+                  : "text-muted-foreground/70 hover:text-muted-foreground"
               )}
             >
               {children}
@@ -108,11 +125,11 @@ export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewPr
           )
         }
         return (
-          <a 
-            href={href} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="text-primary underline hover:text-primary/80 transition-colors"
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline transition-colors hover:text-primary/80"
             onClick={(e) => e.stopPropagation()}
           >
             {children}
@@ -120,25 +137,37 @@ export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewPr
         )
       },
       h1({ children }: any) {
-        return <h1 className="text-3xl font-extrabold border-b border-border pb-2.5 mt-8 mb-4 text-foreground select-text">{children}</h1>
+        return (
+          <h1 className="mt-8 mb-4 border-b border-border pb-2.5 text-3xl font-extrabold text-foreground select-text">
+            {children}
+          </h1>
+        )
       },
       h2({ children }: any) {
-        return <h2 className="text-2xl font-bold border-b border-border pb-2 mt-6 mb-3 text-foreground select-text">{children}</h2>
+        return (
+          <h2 className="mt-6 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground select-text">
+            {children}
+          </h2>
+        )
       },
       h3({ children }: any) {
-        return <h3 className="text-xl font-semibold mt-5 mb-2 text-foreground select-text">{children}</h3>
+        return (
+          <h3 className="mt-5 mb-2 text-xl font-semibold text-foreground select-text">
+            {children}
+          </h3>
+        )
       },
       blockquote({ children }: any) {
         return (
-          <blockquote className="border-l-4 border-primary bg-muted/20 px-4 py-1.5 my-4 italic text-muted-foreground select-text rounded-r-md">
+          <blockquote className="my-4 rounded-r-md border-l-4 border-primary bg-muted/20 px-4 py-1.5 text-muted-foreground italic select-text">
             {children}
           </blockquote>
         )
       },
       table({ children }: any) {
         return (
-          <div className="overflow-x-auto my-6 border border-border rounded-xl select-text shadow-xs">
-            <table className="min-w-full divide-y divide-border border-collapse">
+          <div className="my-6 overflow-x-auto rounded-xl border border-border shadow-xs select-text">
+            <table className="min-w-full border-collapse divide-y divide-border">
               {children}
             </table>
           </div>
@@ -148,19 +177,31 @@ export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewPr
         return <thead className="bg-muted/40 font-semibold">{children}</thead>
       },
       tr({ children }: any) {
-        return <tr className="divide-x divide-border hover:bg-muted/10 transition-colors odd:bg-muted/5">{children}</tr>
+        return (
+          <tr className="divide-x divide-border transition-colors odd:bg-muted/5 hover:bg-muted/10">
+            {children}
+          </tr>
+        )
       },
       th({ children }: any) {
-        return <th className="px-4 py-2.5 text-left text-sm font-semibold text-foreground select-text">{children}</th>
+        return (
+          <th className="px-4 py-2.5 text-left text-sm font-semibold text-foreground select-text">
+            {children}
+          </th>
+        )
       },
       td({ children }: any) {
-        return <td className="px-4 py-2.5 text-sm text-foreground select-text">{children}</td>
+        return (
+          <td className="px-4 py-2.5 text-sm text-foreground select-text">
+            {children}
+          </td>
+        )
       },
       code({ inline, className, children, ...props }: any) {
         const match = /language-(\w+)/.exec(className || "")
         if (!inline && match) {
           return (
-            <pre className="p-4 rounded-xl border border-border bg-muted/20 overflow-x-auto font-mono text-sm my-4 select-text">
+            <pre className="my-4 overflow-x-auto rounded-xl border border-border bg-muted/20 p-4 font-mono text-sm select-text">
               <code className={className} {...props}>
                 {children}
               </code>
@@ -168,18 +209,21 @@ export const ObsidianPreview = ({ content, onChange, onEdit }: ObsidianPreviewPr
           )
         }
         return (
-          <code className="bg-muted/65 px-1.5 py-0.5 rounded-md font-mono text-xs border border-border select-text text-primary" {...props}>
+          <code
+            className="rounded-md border border-border bg-muted/65 px-1.5 py-0.5 font-mono text-xs text-primary select-text"
+            {...props}
+          >
             {children}
           </code>
         )
-      }
+      },
     }
   }, [nodes, navigate, handleToggleCheckbox])
 
   return (
-    <div 
-      onDoubleClick={onEdit} 
-      className="obsidian-preview h-full overflow-y-auto px-4 py-6 sm:px-10 sm:py-8 select-text cursor-default max-w-3xl mx-auto prose prose-neutral dark:prose-invert"
+    <div
+      onDoubleClick={onEdit}
+      className="obsidian-preview prose prose-neutral dark:prose-invert scrollbar-thin h-full cursor-default overflow-y-auto px-4 py-6 select-text sm:px-10 sm:py-8"
       title="Double click to edit note"
     >
       <ReactMarkdown

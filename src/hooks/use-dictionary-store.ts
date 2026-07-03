@@ -1,7 +1,7 @@
+import { get, set } from "idb-keyval"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { idbStateStorage } from "./db"
-import { get, set } from "idb-keyval"
 
 interface DictionaryStoreType {
   customWords: string[]
@@ -15,12 +15,16 @@ interface DictionaryStoreType {
 let standardWordsSet = new Set<string>()
 
 // Load any previously cached dictionary on startup
-get("standard-dictionary").then((cached) => {
-  if (cached && typeof cached === "string") {
-    const list = cached.split("\n")
-    standardWordsSet = new Set(list.map((w) => w.trim().toLowerCase()))
-  }
-}).catch((err) => console.error("Failed to load cached standard dictionary:", err))
+get("standard-dictionary")
+  .then((cached) => {
+    if (cached && typeof cached === "string") {
+      const list = cached.split("\n")
+      standardWordsSet = new Set(list.map((w) => w.trim().toLowerCase()))
+    }
+  })
+  .catch((err) =>
+    console.error("Failed to load cached standard dictionary:", err)
+  )
 
 export const useDictionaryStore = create<DictionaryStoreType>()(
   persist(
@@ -52,7 +56,9 @@ export const useDictionaryStore = create<DictionaryStoreType>()(
 
         zSet({ isLoading: true })
         try {
-          let dictionaryText = await get("standard-dictionary") as string | undefined
+          let dictionaryText = (await get("standard-dictionary")) as
+            | string
+            | undefined
 
           if (!dictionaryText) {
             console.log("Downloading standard dictionary list...")
@@ -63,7 +69,10 @@ export const useDictionaryStore = create<DictionaryStoreType>()(
             await set("standard-dictionary", dictionaryText)
           }
 
-          const words = dictionaryText.split("\n").map((w) => w.trim().toLowerCase()).filter(Boolean)
+          const words = dictionaryText
+            .split("\n")
+            .map((w) => w.trim().toLowerCase())
+            .filter(Boolean)
           standardWordsSet = new Set(words)
           zSet({ isLoaded: true })
         } catch (err) {
@@ -84,6 +93,8 @@ export function isWordSpelledCorrectly(word: string): boolean {
   const cleaned = word.trim().toLowerCase()
   if (!cleaned) return true
 
+  console.log("cleaned", cleaned)
+
   // Ignore numbers, single characters, punctuation, and URLs/emails/formatting marks
   if (
     /^\d+$/.test(cleaned) ||
@@ -96,12 +107,15 @@ export function isWordSpelledCorrectly(word: string): boolean {
   ) {
     return true
   }
+  console.log("cleaned 2", cleaned)
 
   // Check custom dictionary
   const customWords = useDictionaryStore.getState().customWords
   if (customWords.includes(cleaned)) {
     return true
   }
+  console.log("cleaned 3", cleaned)
+  console.log("standardWordsSet", standardWordsSet)
 
   // Check standard dictionary if loaded
   if (standardWordsSet.size > 0) {
