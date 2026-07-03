@@ -3,7 +3,6 @@ import { MainPanel } from "@/components/main-panel/main-panel"
 import { AppSidebar } from "@/components/sidebar/app-sidebar"
 import { ThemeProvider } from "@/components/theme/theme-provider"
 import { SidebarMain, SidebarProvider } from "@/components/ui/sidebar"
-import { Toaster } from "@/components/ui/sonner"
 
 const HomePage = () => {
   return (
@@ -18,7 +17,6 @@ const HomePage = () => {
           </div>
           <Footer />
         </div>
-        <Toaster position="top-right" />
       </SidebarProvider>
     </ThemeProvider>
   )
