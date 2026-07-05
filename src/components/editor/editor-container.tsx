@@ -1,12 +1,22 @@
 import { useNoteStore } from "@/hooks/use-note-store"
+import { BookOpen, Code, Pencil } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { RichEditor } from "./rich-editor"
+import CodeMirrorEditor from "./code-mirror-editor/code-mirror-editor"
+import MilkdownEditor from "./milkdown-editor/milkdown-editor"
 import { ObsidianPreview } from "./obsidian-preview"
-import { Code, BookOpen, Pencil } from "lucide-react"
+import ProseMirrorEditor from "./prose-mirror-editor/prose-mirror-editor"
+import { RichEditor } from "./rich-editor"
 
 interface EditorContainerProps {
   panel: "left" | "right"
 }
+
+type EditorModeType =
+  | "vscode"
+  | "obsidian"
+  | "CodeMirror"
+  | "ProseMirror"
+  | "Milkdown"
 
 const DEBOUNCE_MS = 800
 
@@ -26,14 +36,14 @@ export const EditorContainer = ({ panel }: EditorContainerProps) => {
   const [prevStoreContent, setPrevStoreContent] = useState(storeContent)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [editorMode, setEditorMode] = useState<"vscode" | "obsidian">(() => {
+  const [editorMode, setEditorMode] = useState<EditorModeType>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("editor-mode") as "vscode" | "obsidian") || "vscode"
+      return (localStorage.getItem("editor-mode") as EditorModeType) || "vscode"
     }
     return "vscode"
   })
 
-  const toggleEditorMode = useCallback((mode: "vscode" | "obsidian") => {
+  const toggleEditorMode = useCallback((mode: EditorModeType) => {
     setEditorMode(mode)
     localStorage.setItem("editor-mode", mode)
   }, [])
@@ -100,7 +110,7 @@ export const EditorContainer = ({ panel }: EditorContainerProps) => {
           {note.title}
         </h1>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border bg-muted/35 p-0.5 select-none shrink-0">
+          <div className="flex shrink-0 items-center gap-1 rounded-lg border bg-muted/35 p-0.5 select-none">
             <button
               onClick={() => toggleEditorMode("vscode")}
               className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
@@ -110,7 +120,11 @@ export const EditorContainer = ({ panel }: EditorContainerProps) => {
               }`}
               title="VS Code Mode"
             >
-              {editorMode === "vscode" ? <Code className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+              {editorMode === "vscode" ? (
+                <Code className="h-3.5 w-3.5" />
+              ) : (
+                <Pencil className="h-3.5 w-3.5" />
+              )}
               <span className="hidden sm:inline">Editor</span>
             </button>
             <button
@@ -125,6 +139,42 @@ export const EditorContainer = ({ panel }: EditorContainerProps) => {
               <BookOpen className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Reading</span>
             </button>
+            <button
+              onClick={() => toggleEditorMode("CodeMirror")}
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                editorMode === "CodeMirror"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+              title="CodeMirror"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">CodeMirror</span>
+            </button>
+            <button
+              onClick={() => toggleEditorMode("ProseMirror")}
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                editorMode === "ProseMirror"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+              title="ProseMirror"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">ProseMirror</span>
+            </button>
+            <button
+              onClick={() => toggleEditorMode("Milkdown")}
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                editorMode === "Milkdown"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+              title="Milkdown"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Milkdown</span>
+            </button>
           </div>
           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground select-none">
             {note.updatedAt
@@ -134,18 +184,41 @@ export const EditorContainer = ({ panel }: EditorContainerProps) => {
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        {editorMode === "obsidian" ? (
+        {editorMode === "obsidian" && (
           <ObsidianPreview
             content={text}
             onChange={handleContentChange}
             onEdit={() => toggleEditorMode("vscode")}
           />
-        ) : (
+        )}
+
+        {editorMode === "vscode" && (
           <RichEditor
             value={text}
             onChange={handleContentChange}
             placeholder="Start writing markdown..."
             mode={editorMode}
+          />
+        )}
+        {editorMode === "CodeMirror" && (
+          <CodeMirrorEditor
+            value={text}
+            onChange={handleContentChange}
+            placeholder="Start writing markdown..."
+          />
+        )}
+        {editorMode === "ProseMirror" && (
+          <ProseMirrorEditor
+            value={text}
+            onChange={handleContentChange}
+            placeholder="Start writing markdown..."
+          />
+        )}
+        {editorMode === "Milkdown" && (
+          <MilkdownEditor
+            value={text}
+            onChange={handleContentChange}
+            placeholder="Start writing markdown..."
           />
         )}
       </div>
